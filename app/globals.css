@@ -1,0 +1,20 @@
+@tailwind base; @tailwind components; @tailwind utilities;
+:root { --aqua:#00C853; --navy:#0A192F; --ripple:#F8F9FA; --ice:#E0F7FA; --coral:#FF6F61; }
+body { background: var(--ripple); color: color-mix(in srgb, var(--navy) 80%, transparent); font-size: 14px; line-height: 24px; }
+@media (min-width: 768px) { body { font-size: 16px; } }
+h1, h2, h3 { font-family: var(--font-serif), Georgia, serif; color: var(--navy); font-weight: 700; letter-spacing: -0.02em; }
+h1 { font-size: 28px; line-height: 1.15; } @media (min-width: 768px) { h1 { font-size: 48px; line-height: 56px; } }
+h2 { font-size: 28px; line-height: 1.2; }
+input, select { font-size: 16px; min-height: 48px; }
+.btn { display:inline-flex; align-items:center; justify-content:center; min-height:48px; min-width:48px; padding:0 24px; border-radius:8px; font-weight:600; transition:.15s; }
+.btn-aqua { background: var(--aqua); color: var(--navy); } .btn-aqua:hover { filter: brightness(.92); }
+.btn-navy { background: var(--navy); color: #fff; } .btn-navy:hover { filter: brightness(1.25); }
+.card { background:#fff; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.05); transition:.2s; }
+.card:hover { transform:translateY(-4px); box-shadow:0 16px 40px rgba(0,0,0,.09); }
+.field { width:100%; border:1px solid #cfd8dc; border-radius:8px; padding:0 12px; background:#fff; color:var(--navy); }
+.field:focus { outline:2px solid var(--aqua); border-color:transparent; }
+.bg-surge { background: linear-gradient(135deg, #00C853 0%, #00BFA5 100%); }
+@keyframes marquee { to { transform: translateX(-50%); } }
+.marquee { display:flex; width:max-content; animation: marquee 35s linear infinite; }
+.marquee:hover { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) { .marquee { animation: none; } }
