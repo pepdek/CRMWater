@@ -44,3 +44,6 @@ insert into admins (email) values ('dekpep@gmail.com');
 
 revoke execute on function public.is_admin() from public, anon;
 grant execute on function public.is_admin() to authenticated;
+
+-- Quiz answers from the public /quiz page (full response object).
+alter table leads add column quiz jsonb;
