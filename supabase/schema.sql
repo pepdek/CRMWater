@@ -63,3 +63,10 @@ alter table quiz_events enable row level security;
 create policy "site insert" on quiz_events for insert to anon
   with check (char_length(screen) <= 20 and pg_column_size(answers) < 4000 and (recommendation is null or pg_column_size(recommendation) < 2000));
 create policy "admin all" on quiz_events for all to authenticated using (is_admin()) with check (is_admin());
+
+-- Dashboard v2: source attribution, review, utilization hours, per-lead acquisition cost.
+alter table leads
+  add column lead_source varchar(50),          -- Google Ads | Referral | Website | Facebook | Direct | Other
+  add column review_rating smallint check (review_rating between 1 and 5),
+  add column job_hours numeric(4,1),           -- hours booked for the job (utilization); blank = assume 3
+  add column lead_cost numeric(10,2);          -- what this lead cost to acquire (CPL / ROI)

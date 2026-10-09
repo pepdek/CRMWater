@@ -2,27 +2,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { SERVICES } from '@/lib/services';
+import { type Lead, STAGES, SOURCES, days, money, stale, overdue } from '@/lib/crm';
+import Dashboard from './Dashboard';
 import QuizInsights, { type QuizEvent } from './QuizInsights';
-
-type Lead = {
-  id: string; created_at: string; name: string; email: string | null; phone: string | null; address: string | null;
-  service_type: string; stage: string; stage_changed_at: string; last_contact_at: string | null; notes: string | null;
-  plumber_assigned: string | null; job_date: string | null; quote_amount: number | null; final_amount: number | null;
-  paid: boolean; completed_at: string | null;
-};
-
-const STAGES: [string, string][] = [
-  ['new', 'New Lead Captured'], ['contacted', 'Contacted / Qualifying'], ['consult_booked', 'Water Test / Consultation Booked'],
-  ['proposal_sent', 'Proposal / Estimate Sent'], ['job_scheduled', 'Job Booked & Scheduled'], ['completed', 'Completed & Review Requested'], ['lost', 'Lost'],
-];
-const LABEL = Object.fromEntries(STAGES);
-const DAY = 86400000;
-const days = (iso: string | null) => (iso ? Math.floor((Date.now() - new Date(iso).getTime()) / DAY) : 0);
-const money = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
-
-// Conditional-format rules.
-const stale = (l: Lead) => (l.stage === 'new' || l.stage === 'contacted') && days(l.stage_changed_at) > 10;
-const overdue = (l: Lead) => l.stage === 'completed' && !l.paid && days(l.completed_at ?? l.stage_changed_at) > 30;
 
 function Cell({ value, onCommit, type = 'text', className = '', list }: { value: string | number | null; onCommit: (v: string) => void; type?: string; className?: string; list?: string }) {
   return (
@@ -38,7 +20,7 @@ export default function Crm() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [tab, setTab] = useState<'dashboard' | 'crm' | 'quiz'>('dashboard');
   const [events, setEvents] = useState<QuizEvent[]>([]);
-  const [f, setF] = useState({ q: '', stage: '', plumber: '' });
+  const [f, setF] = useState<{ q: string; stage: string; plumber: string; source: string; flag: '' | 'stuck' | 'unpaid' }>({ q: '', stage: '', plumber: '', source: '', flag: '' });
   const [login, setLogin] = useState({ email: '', password: '', err: '' });
   const [adding, setAdding] = useState(false);
   const [msg, setMsg] = useState('');
@@ -94,24 +76,9 @@ export default function Crm() {
 
   const plumbers = [...new Set(leads.map((l) => l.plumber_assigned).filter(Boolean))] as string[];
   const rows = leads.filter((l) =>
-    (!f.stage || l.stage === f.stage) && (!f.plumber || l.plumber_assigned === f.plumber) &&
+    (!f.stage || l.stage === f.stage) && (!f.plumber || l.plumber_assigned === f.plumber) && (!f.source || (l.lead_source ?? 'Unknown') === f.source) &&
+    (!f.flag || (f.flag === 'stuck' ? stale(l) : overdue(l))) &&
     (!f.q || [l.name, l.email, l.phone, l.address, l.notes].some((v) => v?.toLowerCase().includes(f.q.toLowerCase()))));
-
-  // Dashboard numbers
-  const done = leads.filter((l) => l.stage === 'completed');
-  const closeDays = done.map((l) => (new Date(l.completed_at ?? l.stage_changed_at).getTime() - new Date(l.created_at).getTime()) / DAY);
-  const avgClose = closeDays.length ? closeDays.reduce((a, b) => a + b, 0) / closeDays.length : 0;
-  const revenue = done.reduce((a, l) => a + (l.final_amount ?? 0), 0);
-  const collected = done.filter((l) => l.paid).reduce((a, l) => a + (l.final_amount ?? 0), 0);
-  const conv = leads.length ? (done.length / leads.length) * 100 : 0;
-  const byStage = STAGES.map(([k, label]) => [label, leads.filter((l) => l.stage === k).length] as [string, number]);
-  const maxStage = Math.max(1, ...byStage.map((s) => s[1]));
-  const byPlumber = Object.values(leads.filter((l) => l.plumber_assigned).reduce<Record<string, { name: string; jobs: number; quoted: number; revenue: number }>>((a, l) => {
-    const k = l.plumber_assigned!; a[k] ??= { name: k, jobs: 0, quoted: 0, revenue: 0 };
-    a[k].jobs += l.stage === 'job_scheduled' || l.stage === 'completed' ? 1 : 0; a[k].quoted += l.quote_amount ?? 0;
-    a[k].revenue += l.stage === 'completed' ? l.final_amount ?? 0 : 0; return a;
-  }, {})).sort((a, b) => b.revenue - a.revenue);
-  const staleList = leads.filter(stale), overdueList = leads.filter(overdue);
 
   const exportCsv = () => {
     const cols = ['name', 'phone', 'email', 'address', 'created_at', 'stage', 'notes', 'plumber_assigned', 'job_date', 'quote_amount', 'final_amount', 'paid'] as const;
@@ -121,63 +88,24 @@ export default function Crm() {
     a.download = 'leads.csv'; a.click();
   };
 
-  const Kpi = ({ label, value }: { label: string; value: string }) => <div className="card p-4 !transform-none"><div className="text-3xl font-bold text-navy">{value}</div><div className="text-sm">{label}</div></div>;
-  const TH = ['Name', 'Phone', 'Email', 'Home Address', 'Date Opted In', 'Stage', 'Customer Notes', 'Plumber Assigned', 'Job Date', 'Quote $', 'Final $', 'Paid?', 'Days Since Contact'];
+  const TH = ['Name', 'Phone', 'Email', 'Home Address', 'Date Opted In', 'Stage', 'Customer Notes', 'Plumber Assigned', 'Job Date', 'Quote $', 'Final $', 'Paid?', 'Days Since Contact', 'Lead Source', 'Hours', 'Cost $', 'Rating'];
 
   return (
-    <main className="mx-auto max-w-[1400px] p-4 flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="!text-3xl">CRM</h1>
-        <div className="flex gap-2">
-          {(['dashboard', 'crm', 'quiz'] as const).map((t) => <button key={t} onClick={() => setTab(t)} className={`btn !min-h-10 ${tab === t ? 'btn-navy' : 'bg-white border border-black/10 text-navy'}`}>{t === 'crm' ? 'CRM' : t === 'quiz' ? 'Quiz' : 'Dashboard'}</button>)}
-          <button className="btn !min-h-10 bg-white border border-black/10 text-navy" onClick={() => sb.auth.signOut()}>Sign out</button>
-        </div>
-      </div>
+    <div className="min-h-screen flex flex-col md:flex-row">
+      <aside className="noprint md:w-52 shrink-0 bg-white border-b md:border-r border-[#E5E7EB] p-3 flex md:flex-col gap-1 items-center md:items-stretch overflow-x-auto">
+        <div className="hidden md:block font-bold text-navy px-3 py-2">US Water Pros</div>
+        {(['dashboard', 'crm', 'quiz'] as const).map((t) => <button key={t} onClick={() => setTab(t)} className={`text-left rounded-lg px-3 py-2 font-semibold whitespace-nowrap ${tab === t ? 'bg-[#1F77E0]/10 text-[#1F77E0]' : 'text-navy hover:bg-black/5'}`}>{t === 'crm' ? 'CRM' : t === 'quiz' ? 'Quiz' : 'Dashboard'}</button>)}
+        <button className="md:mt-auto text-left rounded-lg px-3 py-2 text-navy hover:bg-black/5 whitespace-nowrap" onClick={() => sb.auth.signOut()}>Sign out</button>
+      </aside>
+      <main className="flex-1 min-w-0 p-4 flex flex-col gap-4">
       {msg && <p className="text-coral text-sm font-semibold">{msg}</p>}
-
-      {tab === 'dashboard' && (
-        <>
-          <div className="grid gap-4 grid-cols-2 lg:grid-cols-6">
-            <Kpi label="Total leads" value={String(leads.length)} />
-            <Kpi label="Jobs completed" value={String(done.length)} />
-            <Kpi label="Conversion (lead → completed)" value={`${conv.toFixed(1)}%`} />
-            <Kpi label="Avg days to close" value={closeDays.length ? avgClose.toFixed(1) : '—'} />
-            <Kpi label="Revenue (completed)" value={money(revenue)} />
-            <Kpi label="Collected" value={money(collected)} />
-          </div>
-          <div className="grid gap-5 lg:grid-cols-2">
-            <section className="card p-5 !transform-none">
-              <h2 className="text-xl">Jobs by stage</h2>
-              <div className="mt-3 flex flex-col gap-2">
-                {byStage.map(([label, n]) => (
-                  <div key={label}><div className="flex justify-between text-sm"><span>{label}</span><b>{n}</b></div><div className="h-2 bg-ice rounded"><div className="h-2 bg-aqua rounded" style={{ width: `${(n / maxStage) * 100}%` }} /></div></div>
-                ))}
-              </div>
-            </section>
-            <section className="card p-5 !transform-none overflow-x-auto">
-              <h2 className="text-xl">Revenue by plumber</h2>
-              {byPlumber.length ? (
-                <table className="w-full text-sm mt-3 text-left"><thead><tr className="text-navy"><th className="py-1">Plumber</th><th>Jobs booked/done</th><th>Quoted</th><th>Revenue</th></tr></thead>
-                  <tbody>{byPlumber.map((p) => <tr key={p.name} className="border-t border-black/10"><td className="py-2 font-semibold">{p.name}</td><td>{p.jobs}</td><td>{money(p.quoted)}</td><td>{money(p.revenue)}</td></tr>)}</tbody></table>
-              ) : <p className="mt-3 text-sm">Assign plumbers in the CRM tab to see this.</p>}
-            </section>
-            <section className="card p-5 !transform-none border-l-4 border-coral">
-              <h2 className="text-xl">Needs attention: stuck over 10 days ({staleList.length})</h2>
-              <ul className="mt-2 text-sm flex flex-col gap-1">{staleList.slice(0, 10).map((l) => <li key={l.id}><b>{l.name}</b> · {LABEL[l.stage]} · {days(l.stage_changed_at)} days</li>)}{!staleList.length && <li>Nothing stuck. 🎉</li>}</ul>
-            </section>
-            <section className="card p-5 !transform-none border-l-4 border-amber-400">
-              <h2 className="text-xl">Unpaid over 30 days ({overdueList.length})</h2>
-              <ul className="mt-2 text-sm flex flex-col gap-1">{overdueList.slice(0, 10).map((l) => <li key={l.id}><b>{l.name}</b> · {l.final_amount ? money(l.final_amount) : 'no amount'} · {days(l.completed_at ?? l.stage_changed_at)} days</li>)}{!overdueList.length && <li>No overdue invoices.</li>}</ul>
-            </section>
-          </div>
-        </>
-      )}
-
+      {tab === 'dashboard' && <Dashboard leads={leads} go={(p) => { setF({ q: '', stage: '', plumber: '', source: '', flag: '', ...p }); if (Object.keys(p).length) setTab('crm'); }} />}
       {tab === 'quiz' && <QuizInsights events={events} />}
 
       {tab === 'crm' && (
         <>
           <div className="flex flex-wrap gap-2">
+            {(f.source || f.flag) && <button className="btn !min-h-12 bg-white border border-black/10 text-navy" onClick={() => setF({ ...f, source: '', flag: '' })}>Clear: {f.source || (f.flag === 'stuck' ? 'stuck leads' : 'unpaid')} ✕</button>}
             <input className="field !w-56" placeholder="Search name, phone, email…" value={f.q} onChange={(e) => setF({ ...f, q: e.target.value })} />
             <select className="field !w-auto" value={f.stage} onChange={(e) => setF({ ...f, stage: e.target.value })}><option value="">All stages</option>{STAGES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
             <select className="field !w-auto" value={f.plumber} onChange={(e) => setF({ ...f, plumber: e.target.value })}><option value="">All plumbers</option>{plumbers.map((p) => <option key={p}>{p}</option>)}</select>
@@ -201,10 +129,11 @@ export default function Crm() {
               <button className="btn btn-navy sm:col-span-3 lg:col-span-6">Save lead</button>
             </form>
           )}
-          <p className="text-xs">Edit any cell, it saves when you click away. <span className="bg-red-100 px-1">Red</span> = stuck in New/Contacted over 10 days. <span className="bg-amber-100 px-1">Amber</span> = unpaid over 30 days.</p>
+          <p className="text-xs">Edit any cell, it saves when you click away. <span className="bg-red-100 px-1">Red</span> = stuck in the same stage over 10 days. <span className="bg-amber-100 px-1">Amber</span> = unpaid over 30 days.</p>
+          <datalist id="sources">{SOURCES.map((p) => <option key={p} value={p} />)}</datalist>
           <datalist id="plumbers">{plumbers.map((p) => <option key={p} value={p} />)}</datalist>
           <div className="card overflow-x-auto !transform-none">
-            <table className="w-full text-left text-sm min-w-[1500px]">
+            <table className="w-full text-left text-sm min-w-[1900px]">
               <thead><tr className="text-navy">{TH.map((h) => <th key={h} className="p-2 whitespace-nowrap">{h}</th>)}</tr></thead>
               <tbody>{rows.map((l) => (
                 <tr key={l.id} className={`border-t border-black/10 ${stale(l) ? 'bg-red-100' : overdue(l) ? 'bg-amber-100' : ''}`}>
@@ -221,6 +150,10 @@ export default function Crm() {
                   <td className="p-2 w-24"><Cell type="number" value={l.final_amount} onCommit={(v) => update(l.id, { final_amount: num(v) })} /></td>
                   <td className="p-2"><input type="checkbox" checked={l.paid} onChange={(e) => update(l.id, { paid: e.target.checked })} className="w-5 h-5 accent-[var(--aqua)]" aria-label="Paid" /></td>
                   <td className="p-2 whitespace-nowrap"><b>{days(l.last_contact_at ?? l.created_at)}</b> <button className="ml-1 text-xs underline" onClick={() => update(l.id, { last_contact_at: new Date().toISOString() })}>log contact</button></td>
+                  <td className="p-2 min-w-32"><Cell value={l.lead_source} list="sources" onCommit={(v) => update(l.id, { lead_source: v || null })} /></td>
+                  <td className="p-2 w-20"><Cell type="number" value={l.job_hours} onCommit={(v) => update(l.id, { job_hours: num(v) })} /></td>
+                  <td className="p-2 w-24"><Cell type="number" value={l.lead_cost} onCommit={(v) => update(l.id, { lead_cost: num(v) })} /></td>
+                  <td className="p-2 w-20"><Cell type="number" value={l.review_rating} onCommit={(v) => update(l.id, { review_rating: num(v) })} /></td>
                 </tr>
               ))}</tbody>
             </table>
@@ -229,5 +162,6 @@ export default function Crm() {
         </>
       )}
     </main>
+    </div>
   );
 }
