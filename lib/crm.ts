@@ -1,6 +1,6 @@
 export type Lead = {
   id: string; created_at: string; name: string; email: string | null; phone: string | null; address: string | null;
-  service_type: string; stage: string; stage_changed_at: string; last_contact_at: string | null; notes: string | null;
+  service_type: string; page_source: string | null; stage: string; stage_changed_at: string; last_contact_at: string | null; notes: string | null;
   plumber_assigned: string | null; job_date: string | null; quote_amount: number | null; final_amount: number | null;
   paid: boolean; completed_at: string | null;
   lead_source: string | null; review_rating: number | null; job_hours: number | null; lead_cost: number | null;

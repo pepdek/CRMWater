@@ -3,26 +3,26 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { SERVICES } from '@/lib/services';
 import { type Lead, STAGES, SOURCES, days, money, stale, overdue } from '@/lib/crm';
+import Cell from './Cell';
+import LeadPanel from './LeadPanel';
 import Dashboard from './Dashboard';
 import QuizInsights, { type QuizEvent } from './QuizInsights';
 import SiteActivity, { type SiteEvent } from './SiteActivity';
 
-function Cell({ value, onCommit, type = 'text', className = '', list }: { value: string | number | null; onCommit: (v: string) => void; type?: string; className?: string; list?: string }) {
-  return (
-    <input key={String(value)} defaultValue={value ?? ''} type={type} list={list} step={type === 'number' ? '0.01' : undefined}
-      onBlur={(e) => e.target.value !== String(value ?? '') && onCommit(e.target.value)}
-      className={`bg-transparent border-b border-transparent hover:border-black/20 focus:border-[#00a0bf] outline-none min-h-9 w-full ${className}`} />
-  );
-}
+const TABS = ['dashboard', 'crm', 'quiz', 'activity'] as const;
+type Tab = (typeof TABS)[number];
+const EMPTY_F = { q: '', stage: '', plumber: '', source: '', flag: '' as '' | 'stuck' | 'unpaid' };
 
 export default function Crm() {
   const sb = useMemo(() => supabase(), []);
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [tab, setTab] = useState<'dashboard' | 'crm' | 'quiz' | 'activity'>('dashboard');
+  const [tab, setTab] = useState<Tab>('dashboard');
+  const [leadId, setLeadId] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
   const [siteEvents, setSiteEvents] = useState<SiteEvent[]>([]);
   const [events, setEvents] = useState<QuizEvent[]>([]);
-  const [f, setF] = useState<{ q: string; stage: string; plumber: string; source: string; flag: '' | 'stuck' | 'unpaid' }>({ q: '', stage: '', plumber: '', source: '', flag: '' });
+  const [f, setF] = useState(EMPTY_F);
   const [login, setLogin] = useState({ email: '', password: '', err: '' });
   const [adding, setAdding] = useState(false);
   const [msg, setMsg] = useState('');
@@ -47,6 +47,30 @@ export default function Crm() {
     const t = setInterval(load, 30000);
     return () => clearInterval(t);
   }, [authed, load]);
+
+  // URL <-> state: ?tab=crm&stage=..&flag=..&lead=<id>. Tab/lead changes push history; filter typing replaces.
+  const readUrl = useCallback(() => {
+    const u = new URLSearchParams(location.search), t = u.get('tab') as Tab;
+    setTab(TABS.includes(t) ? t : 'dashboard');
+    setF({ q: u.get('q') ?? '', stage: u.get('stage') ?? '', plumber: u.get('plumber') ?? '', source: u.get('source') ?? '', flag: (u.get('flag') as 'stuck' | 'unpaid') || '' });
+    setLeadId(u.get('lead'));
+  }, []);
+  useEffect(() => {
+    readUrl(); setReady(true);
+    window.addEventListener('popstate', readUrl);
+    return () => window.removeEventListener('popstate', readUrl);
+  }, [readUrl]);
+  useEffect(() => {
+    if (!ready) return;
+    const u = new URLSearchParams();
+    if (tab !== 'dashboard') u.set('tab', tab);
+    if (tab === 'crm') { (Object.keys(f) as (keyof typeof f)[]).forEach((k) => f[k] && u.set(k, f[k])); if (leadId) u.set('lead', leadId); }
+    const url = location.pathname + (u.size ? `?${u}` : '');
+    if (url === location.pathname + location.search) return;
+    const cur = new URLSearchParams(location.search);
+    const nav = (cur.get('tab') ?? 'dashboard') !== tab || cur.get('lead') !== (tab === 'crm' ? leadId : null);
+    history[nav ? 'pushState' : 'replaceState'](null, '', url);
+  }, [ready, tab, f, leadId]);
 
   if (authed === null) return null;
   if (!authed) {
@@ -92,19 +116,21 @@ export default function Crm() {
     a.download = 'leads.csv'; a.click();
   };
 
-  const TH = ['Name', 'Phone', 'Email', 'Home Address', 'Date Opted In', 'Stage', 'Customer Notes', 'Plumber Assigned', 'Job Date', 'Quote $', 'Final $', 'Paid?', 'Days Since Contact', 'Lead Source', 'Hours', 'Cost $', 'Rating'];
+  const lead = leadId ? leads.find((l) => l.id === leadId) : undefined;
+  // Table shows the daily-driver columns only; everything else is in the side panel.
+  const TH: [string, string][] = [['Name', ''], ['Phone', 'hidden md:table-cell'], ['Stage', ''], ['Plumber', 'hidden md:table-cell'], ['Quote $', 'hidden lg:table-cell'], ['Final $', ''], ['Paid?', ''], ['Days Since Contact', '']];
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
       <aside className="noprint md:w-52 shrink-0 gcard !rounded-none !bg-[var(--side)] p-3 flex md:flex-col gap-1 items-center md:items-stretch overflow-x-auto">
         <div className="hidden md:block font-bold text-navy px-3 py-2">US Water Pros</div>
-        {(['dashboard', 'crm', 'quiz', 'activity'] as const).map((t) => <button key={t} onClick={() => setTab(t)} className={`text-left rounded-lg px-3 py-2 font-semibold whitespace-nowrap ${tab === t ? 'bg-[#0066cc]/10 text-[#0066cc]' : 'text-navy hover:bg-black/5'}`}>{t === 'crm' ? 'CRM' : t === 'quiz' ? 'Quiz' : t === 'activity' ? 'Site activity' : 'Dashboard'}</button>)}
+        {(['dashboard', 'crm', 'quiz', 'activity'] as const).map((t) => <button key={t} onClick={() => { setTab(t); setLeadId(null); }} className={`text-left rounded-lg px-3 py-2 font-semibold whitespace-nowrap ${tab === t ? 'bg-[#0066cc]/10 text-[#0066cc]' : 'text-navy hover:bg-black/5'}`}>{t === 'crm' ? 'CRM' : t === 'quiz' ? 'Quiz' : t === 'activity' ? 'Site activity' : 'Dashboard'}</button>)}
         <button className="md:mt-auto text-left rounded-lg px-3 py-2 text-navy hover:bg-black/5 whitespace-nowrap" onClick={() => sb.auth.signOut()}>Sign out</button>
       </aside>
       <main className="flex-1 min-w-0 p-4 md:p-10 flex flex-col gap-10">
       <h1 className="!text-3xl">{{ dashboard: 'Dashboard', crm: 'CRM', quiz: 'Quiz', activity: 'Site activity' }[tab]}</h1>
       {msg && <p className="text-coral text-sm font-semibold">{msg}</p>}
-      {tab === 'dashboard' && <Dashboard leads={leads} go={(p) => { setF({ q: '', stage: '', plumber: '', source: '', flag: '', ...p }); if (Object.keys(p).length) setTab('crm'); }} />}
+      {tab === 'dashboard' && <Dashboard leads={leads} go={(p) => { setF({ ...EMPTY_F, ...p }); setLeadId(null); if (Object.keys(p).length) setTab('crm'); }} />}
       {tab === 'quiz' && <QuizInsights events={events} />}
       {tab === 'activity' && <SiteActivity events={siteEvents} />}
 
@@ -135,31 +161,22 @@ export default function Crm() {
               <button className="btn btn-navy sm:col-span-3 lg:col-span-6">Save lead</button>
             </form>
           )}
-          <p className="text-xs">Edit any cell, it saves when you click away. <span className="bg-red-100 px-1">Red</span> = stuck in the same stage over 10 days. <span className="bg-amber-100 px-1">Amber</span> = unpaid over 30 days.</p>
+          <p className="text-xs">Click a name to open the full record. Edit cells inline; they save when you click away. <span className="bg-red-100 px-1">Red</span> = stuck in the same stage over 10 days. <span className="bg-amber-100 px-1">Amber</span> = unpaid over 30 days.</p>
           <datalist id="sources">{SOURCES.map((p) => <option key={p} value={p} />)}</datalist>
           <datalist id="plumbers">{plumbers.map((p) => <option key={p} value={p} />)}</datalist>
           <div className="card overflow-x-auto !transform-none">
-            <table className="w-full text-left text-sm min-w-[1900px]">
-              <thead><tr className="text-navy">{TH.map((h) => <th key={h} className="p-2 whitespace-nowrap">{h}</th>)}</tr></thead>
+            <table className="w-full text-left text-sm">
+              <thead><tr className="text-navy">{TH.map(([h, c]) => <th key={h} className={`p-2 whitespace-nowrap ${c}`}>{h}</th>)}</tr></thead>
               <tbody>{rows.map((l) => (
                 <tr key={l.id} className={`border-t border-black/10 ${stale(l) ? 'bg-red-100' : overdue(l) ? 'bg-amber-100' : ''}`}>
-                  <td className="p-2 min-w-36"><Cell value={l.name} onCommit={(v) => update(l.id, { name: v })} className="font-semibold" /></td>
-                  <td className="p-2 min-w-32"><Cell value={l.phone} onCommit={(v) => update(l.id, { phone: v || null })} /></td>
-                  <td className="p-2 min-w-48"><Cell value={l.email} onCommit={(v) => update(l.id, { email: v || null })} /></td>
-                  <td className="p-2 min-w-48"><Cell value={l.address} onCommit={(v) => update(l.id, { address: v || null })} /></td>
-                  <td className="p-2 whitespace-nowrap">{new Date(l.created_at).toLocaleDateString()}</td>
-                  <td className="p-2"><select className="field !min-h-9 !w-52" value={l.stage} onChange={(e) => setStage(l, e.target.value)}>{STAGES.map(([k, lb]) => <option key={k} value={k}>{lb}</option>)}</select></td>
-                  <td className="p-2 min-w-56"><Cell value={l.notes} onCommit={(v) => update(l.id, { notes: v || null })} /></td>
-                  <td className="p-2 min-w-36"><Cell value={l.plumber_assigned} list="plumbers" onCommit={(v) => update(l.id, { plumber_assigned: v || null })} /></td>
-                  <td className="p-2"><Cell type="date" value={l.job_date} onCommit={(v) => update(l.id, { job_date: v || null })} /></td>
-                  <td className="p-2 w-24"><Cell type="number" value={l.quote_amount} onCommit={(v) => update(l.id, { quote_amount: num(v) })} /></td>
+                  <td className="p-2 min-w-36"><button className="font-semibold text-left link" onClick={() => setLeadId(l.id)}>{l.name}</button></td>
+                  <td className="p-2 whitespace-nowrap hidden md:table-cell">{l.phone ? <a href={`tel:${l.phone}`}>{l.phone}</a> : '—'}</td>
+                  <td className="p-2"><select className="field !min-h-9 !w-44" value={l.stage} onChange={(e) => setStage(l, e.target.value)}>{STAGES.map(([k, lb]) => <option key={k} value={k}>{lb}</option>)}</select></td>
+                  <td className="p-2 min-w-28 hidden md:table-cell"><Cell value={l.plumber_assigned} list="plumbers" onCommit={(v) => update(l.id, { plumber_assigned: v || null })} /></td>
+                  <td className="p-2 w-24 hidden lg:table-cell"><Cell type="number" value={l.quote_amount} onCommit={(v) => update(l.id, { quote_amount: num(v) })} /></td>
                   <td className="p-2 w-24"><Cell type="number" value={l.final_amount} onCommit={(v) => update(l.id, { final_amount: num(v) })} /></td>
                   <td className="p-2"><input type="checkbox" checked={l.paid} onChange={(e) => update(l.id, { paid: e.target.checked })} className="w-5 h-5 accent-[#00a0bf]" aria-label="Paid" /></td>
                   <td className="p-2 whitespace-nowrap"><b>{days(l.last_contact_at ?? l.created_at)}</b> <button className="ml-1 text-xs link" onClick={() => update(l.id, { last_contact_at: new Date().toISOString() })}>log contact</button></td>
-                  <td className="p-2 min-w-32"><Cell value={l.lead_source} list="sources" onCommit={(v) => update(l.id, { lead_source: v || null })} /></td>
-                  <td className="p-2 w-20"><Cell type="number" value={l.job_hours} onCommit={(v) => update(l.id, { job_hours: num(v) })} /></td>
-                  <td className="p-2 w-24"><Cell type="number" value={l.lead_cost} onCommit={(v) => update(l.id, { lead_cost: num(v) })} /></td>
-                  <td className="p-2 w-20"><Cell type="number" value={l.review_rating} onCommit={(v) => update(l.id, { review_rating: num(v) })} /></td>
                 </tr>
               ))}</tbody>
             </table>
@@ -167,6 +184,7 @@ export default function Crm() {
           </div>
         </>
       )}
+      {tab === 'crm' && lead && <LeadPanel lead={lead} update={update} setStage={setStage} onClose={() => setLeadId(null)} />}
     </main>
     </div>
   );
