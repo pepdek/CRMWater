@@ -1,22 +1,30 @@
 @tailwind base; @tailwind components; @tailwind utilities;
-:root { --aqua:#00C853; --navy:#0A192F; --ripple:#F8F9FA; --ice:#E0F7FA; --coral:#FF6F61; }
-body { background: var(--ripple); color: color-mix(in srgb, var(--navy) 80%, transparent); font-size: 14px; line-height: 24px; }
+/* Crystal Clear. blue: headings/active · orange: primary actions only · teal (deep): secondary actions/badges · aqua (secondary teal): links/borders/focus · cyan: hover/focus glow · mist: panels */
+:root {
+  --blue:#0066cc; --orange:#ff6b35; --teal:#1b4965; --aqua:#00a0bf; --cyan:#a8e9ef; --mist:#effef8; --coral:#FF6F61;
+  --navy:#1b4965; --ripple:#effef8; --ice:rgba(27,73,101,.10);
+  --ink:#1a1a1a; --muted:#4b5563; --head:#0066cc;
+  --page:linear-gradient(160deg,#effef8,#cdeff3); --card:rgba(239,254,248,.72); --line:rgba(0,160,191,.35); --track:rgba(27,73,101,.10);
+}
+@media (prefers-color-scheme: dark) { :root {
+  --navy:#a8e9ef; --ripple:#0d2433; --ice:rgba(168,233,239,.15); --ink:#fff; --muted:#b6c8d2; --head:#a8e9ef;
+  --page:linear-gradient(160deg,#0d2433,#12384d); --card:rgba(27,73,101,.45); --line:rgba(0,160,191,.5); --track:rgba(168,233,239,.15);
+} }
+body { background: var(--page) fixed; color: var(--ink); font-size: 14px; line-height: 24px; }
 @media (min-width: 768px) { body { font-size: 16px; } }
-h1, h2, h3 { font-family: var(--font-serif), Georgia, serif; color: var(--navy); font-weight: 700; letter-spacing: -0.02em; }
+h1, h2 { font-family: var(--font-serif), Georgia, serif; color: var(--head); font-weight: 700; letter-spacing: -0.02em; }
 h1 { font-size: 28px; line-height: 1.15; } @media (min-width: 768px) { h1 { font-size: 48px; line-height: 56px; } }
 h2 { font-size: 28px; line-height: 1.2; }
 input, select { font-size: 16px; min-height: 48px; }
 .btn { display:inline-flex; align-items:center; justify-content:center; min-height:48px; min-width:48px; padding:0 24px; border-radius:8px; font-weight:600; transition:.15s; }
-.btn-aqua { background: var(--aqua); color: var(--navy); } .btn-aqua:hover { filter: brightness(.92); }
-.btn-navy { background: var(--navy); color: #fff; } .btn-navy:hover { filter: brightness(1.25); }
-.card { background:#fff; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.05); transition:.2s; }
-.card:hover { transform:translateY(-4px); box-shadow:0 16px 40px rgba(0,0,0,.09); }
-.field { width:100%; border:1px solid #cfd8dc; border-radius:8px; padding:0 12px; background:#fff; color:var(--navy); }
-.field:focus { outline:2px solid var(--aqua); border-color:transparent; }
-.bg-surge { background: linear-gradient(135deg, #00C853 0%, #00BFA5 100%); }
-@keyframes marquee { to { transform: translateX(-50%); } }
-.marquee { display:flex; width:max-content; animation: marquee 35s linear infinite; }
-.marquee:hover { animation-play-state: paused; }
-@media (prefers-reduced-motion: reduce) { .marquee { animation: none; } }
-.gcard { background:#fff; border:1px solid #E5E7EB; border-radius:8px; box-shadow:0 1px 2px rgba(0,0,0,.05); }
+.btn:focus-visible { outline:none; box-shadow:0 0 0 3px var(--cyan); }
+/* orange = primary action only; ink text because white on #ff6b35 fails AA */
+.btn-orange { background: var(--orange); color: var(--ink); } .btn-orange:hover { filter: brightness(.94); box-shadow:0 0 0 3px var(--cyan); }
+.btn-navy { background: var(--teal); color:#fff; border:1px solid var(--aqua); } .btn-navy:hover { background:#24607f; }
+.btn-outline { background:transparent; color:var(--navy); border:1px solid var(--aqua); } .btn-outline:hover { background: var(--cyan); color:#1a1a1a; }
+.card, .gcard { background: var(--card); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border:1px solid var(--line); border-radius:12px; box-shadow:0 8px 24px rgba(27,73,101,.08); }
+.card { transition:.2s; } .card:hover { transform:translateY(-2px); }
+.field { width:100%; border:1px solid var(--aqua); border-radius:8px; padding:0 12px; background: color-mix(in srgb, var(--mist) 85%, transparent); color:var(--ink); }
+.field:focus { outline:none; border-color:var(--aqua); box-shadow:0 0 0 3px var(--cyan); }
+a, .link { color: var(--aqua); text-decoration: underline; }
 @media print { .noprint { display:none !important; } body { background:#fff; } }

@@ -5,7 +5,7 @@ import { SERVICES } from '@/lib/services';
 
 // ponytail: hardcoded targets/assumptions; move to a settings row when they need editing in-app.
 const WEEKLY_TARGET = 10000, WEEK_HOURS = 40, DEFAULT_JOB_HOURS = 3;
-const BLUE = '#1F77E0', GREEN = '#10B981', RED = '#EF4444', YELLOW = '#F59E0B', GRAY = '#6B7280';
+const BLUE = '#0066cc', GREEN = '#10B981', RED = '#EF4444', YELLOW = '#F59E0B', GRAY = '#6B7280';
 const SVC = Object.fromEntries(SERVICES.map((s) => [s.slug, s.name]));
 
 type Period = { from: number; to: number };
@@ -72,9 +72,9 @@ function Line({ v, color = BLUE, className = 'h-7' }: { v: number[]; color?: str
   const pts = v.map((y, i) => `${(i / Math.max(1, v.length - 1)) * 100},${96 - ((y - min) / r) * 88}`).join(' ');
   return <svg viewBox="0 0 100 100" preserveAspectRatio="none" className={`w-full ${className}`}><polyline points={pts} fill="none" stroke={color} strokeWidth="2.5" vectorEffect="non-scaling-stroke" /></svg>;
 }
-const Bar = ({ pct, color = BLUE }: { pct: number; color?: string }) => <div className="h-2 rounded bg-[#E5E7EB]"><div className="h-2 rounded" style={{ width: `${Math.min(100, pct)}%`, background: color }} /></div>;
+const Bar = ({ pct, color = BLUE }: { pct: number; color?: string }) => <div className="h-2 rounded bg-[var(--track)]"><div className="h-2 rounded" style={{ width: `${Math.min(100, pct)}%`, background: color }} /></div>;
 const Card = ({ title, children, className = '' }: { title: string; children: React.ReactNode; className?: string }) => (
-  <section className={`gcard p-4 ${className}`}><div className="font-semibold text-[#111827] mb-3">{title}</div>{children}</section>
+  <section className={`gcard p-6 md:p-10 ${className}`}><h2 className="!text-xl mb-4">{title}</h2>{children}</section>
 );
 
 export default function Dashboard({ leads, go }: { leads: Lead[]; go: Go }) {
@@ -164,31 +164,31 @@ export default function Dashboard({ leads, go }: { leads: Lead[]; go: Go }) {
   });
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
         {filters}
-        <button className="btn !min-h-10 bg-white border border-black/10 text-navy noprint" onClick={() => window.print()}>Export PDF</button>
+        <button className="btn btn-outline !min-h-10 noprint" onClick={() => window.print()}>Export PDF</button>
       </div>
 
       <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
         {pills.map(({ k, v, ch, color }) => (
-          <button key={k.id} onClick={() => setOpen(k)} className="gcard p-3 text-left hover:border-[#1F77E0] transition-colors">
-            <div className="text-xs text-[#6B7280]">{k.label}</div>
-            <div className="text-2xl font-bold text-[#1F77E0] leading-8">{k.fmt(v)}</div>
-            <div className="text-xs font-semibold" style={{ color }}>{ch === null ? '—' : `${ch > 0 ? '↑' : ch < 0 ? '↓' : ''}${Math.abs(ch).toFixed(0)}%`}{k.extra && <span className="ml-2 font-normal text-[#6B7280]">{k.extra(fl, p)}</span>}</div>
+          <button key={k.id} onClick={() => setOpen(k)} className="gcard p-3 text-left hover:border-[#00a0bf] transition-colors">
+            <div className="text-xs text-[var(--muted)]">{k.label}</div>
+            <div className="text-2xl font-bold text-[#0066cc] leading-8">{k.fmt(v)}</div>
+            <div className="text-xs font-semibold" style={{ color }}>{ch === null ? '—' : `${ch > 0 ? '↑' : ch < 0 ? '↓' : ''}${Math.abs(ch).toFixed(0)}%`}{k.extra && <span className="ml-2 font-normal text-[var(--muted)]">{k.extra(fl, p)}</span>}</div>
             <Line v={slices(k, fl)} color={color} />
           </button>
         ))}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-[2fr_1.75fr_1.25fr]">
+      <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-[2fr_1.75fr_1.25fr]">
         <Card title="Pipeline funnel">
           <div className="flex flex-col gap-3">
             {FUNNEL.map((s, i) => {
               const conv = i < 5 && reached[i] ? (reached[i + 1] / reached[i]) * 100 : null;
               const c = conv === null ? GREEN : conv > 80 ? GREEN : conv >= 60 ? YELLOW : RED, stuck = stuckBy(s);
               return (
-                <button key={s} onClick={() => setStage(stage === s ? null : s)} className={`text-left rounded p-1 -m-1 ${stage === s ? 'bg-[#1F77E0]/10' : ''}`}>
+                <button key={s} onClick={() => setStage(stage === s ? null : s)} className={`text-left rounded p-1 -m-1 ${stage === s ? 'bg-[#0066cc]/10' : ''}`}>
                   <div className="flex justify-between text-sm"><span>{SHORT[i]} <b>({reached[i]})</b>{stuck > 0 && <span className="ml-2 text-xs font-semibold text-white rounded px-1.5" style={{ background: RED }}>{stuck} stuck</span>}</span>
                     <span className="font-semibold" style={{ color: c }}>{conv === null ? '' : `${conv.toFixed(0)}% ↓`}</span></div>
                   <Bar pct={reached[0] ? (reached[i] / reached[0]) * 100 : 0} color={c} />
@@ -197,7 +197,7 @@ export default function Dashboard({ leads, go }: { leads: Lead[]; go: Go }) {
             })}
           </div>
           {stage && (
-            <ul className="mt-3 border-t border-[#E5E7EB] pt-2 text-sm flex flex-col gap-1 max-h-48 overflow-auto">
+            <ul className="mt-3 border-t border-[var(--line)] pt-2 text-sm flex flex-col gap-1 max-h-48 overflow-auto">
               {fl.filter((l) => l.stage === stage).map((l) => <li key={l.id} className="flex justify-between"><span><b>{l.name}</b> · {plumberOf(l)}</span><span className={stale(l) ? 'text-[#EF4444] font-semibold' : ''}>{days(l.stage_changed_at)}d</span></li>)}
               {!fl.some((l) => l.stage === stage) && <li>No leads in this stage.</li>}
             </ul>
@@ -206,14 +206,14 @@ export default function Dashboard({ leads, go }: { leads: Lead[]; go: Go }) {
 
         <Card title="Revenue">
           <div className="flex gap-1 mb-3 text-sm">{([['plumber', 'By plumber'], ['time', 'Over time'], ['type', 'By job type']] as const).map(([t, l]) => (
-            <button key={t} onClick={() => setTab(t)} className={`px-2 py-1 rounded ${tab === t ? 'bg-[#1F77E0] text-white' : 'bg-[#F5F5F5]'}`}>{l}</button>))}</div>
+            <button key={t} onClick={() => setTab(t)} className={`px-2 py-1 rounded ${tab === t ? 'bg-[#0066cc] text-white' : 'bg-[var(--track)]'}`}>{l}</button>))}</div>
           {tab === 'plumber' && <div className="flex flex-col gap-3">{byPlumber.map(([n, v]) => (
             <button key={n} className="text-left" onClick={() => go({ plumber: n })}><div className="flex justify-between text-sm"><span>{n}</span><b>{money(v)}</b></div><Bar pct={(v / byPlumber[0][1]) * 100} /></button>))}
-            {!byPlumber.length && <p className="text-sm text-[#6B7280]">No completed jobs in this range.</p>}</div>}
-          {tab === 'time' && <><Line v={timeSeries} className="h-40" /><div className="flex justify-between text-xs text-[#6B7280]"><span>{new Date(p.from).toLocaleDateString()}</span><span>{new Date(p.to).toLocaleDateString()}</span></div></>}
+            {!byPlumber.length && <p className="text-sm text-[var(--muted)]">No completed jobs in this range.</p>}</div>}
+          {tab === 'time' && <><Line v={timeSeries} className="h-40" /><div className="flex justify-between text-xs text-[var(--muted)]"><span>{new Date(p.from).toLocaleDateString()}</span><span>{new Date(p.to).toLocaleDateString()}</span></div></>}
           {tab === 'type' && (typeTotal ? <div className="flex items-center gap-4"><div className="w-28 h-28 rounded-full shrink-0" style={{ background: `conic-gradient(${donut})`, WebkitMask: 'radial-gradient(circle 32px, transparent 98%, #000)' , mask: 'radial-gradient(circle 32px, transparent 98%, #000)' }} />
             <ul className="text-sm flex flex-col gap-1">{byType.map(([n, v], i) => <li key={n}><span className="inline-block w-2 h-2 rounded-full mr-1" style={{ background: palette[i % 6] }} />{n} <b>{money(v)}</b></li>)}</ul></div>
-            : <p className="text-sm text-[#6B7280]">No completed jobs in this range.</p>)}
+            : <p className="text-sm text-[var(--muted)]">No completed jobs in this range.</p>)}
         </Card>
 
         <Card title="Alerts" className="md:col-span-2 lg:col-span-1">
@@ -222,21 +222,21 @@ export default function Dashboard({ leads, go }: { leads: Lead[]; go: Go }) {
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-10 lg:grid-cols-2">
         <Card title="Lead source attribution" className="overflow-x-auto">
-          <table className="w-full text-sm text-left"><thead><tr className="text-[#6B7280]"><th className="py-1">Source</th>{SRC_HEAD.map((h, i) => (
+          <table className="w-full text-sm text-left"><thead><tr className="text-[var(--muted)]"><th className="py-1">Source</th>{SRC_HEAD.map((h, i) => (
             <th key={h} className="cursor-pointer" onClick={() => setSort({ k: i, dir: sort.k === i && sort.dir === -1 ? 1 : -1 })}>{h}{sort.k === i ? (sort.dir === -1 ? ' ↓' : ' ↑') : ''}</th>))}</tr></thead>
-            <tbody>{srcRows.map((r) => <tr key={r.name} className="border-t border-[#E5E7EB] cursor-pointer hover:bg-[#F5F5F5]" onClick={() => go({ source: r.name })}>
+            <tbody>{srcRows.map((r) => <tr key={r.name} className="border-t border-[var(--line)] cursor-pointer hover:bg-[var(--track)]" onClick={() => go({ source: r.name })}>
               <td className="py-2 font-semibold">{r.name}</td>{r.cells.map((c, i) => <td key={i}>{srcFmt[i](c)}</td>)}</tr>)}</tbody></table>
-          {!srcRows.length && <p className="text-sm text-[#6B7280] mt-2">No leads in this range. Set Lead Source in the CRM tab.</p>}
+          {!srcRows.length && <p className="text-sm text-[var(--muted)] mt-2">No leads in this range. Set Lead Source in the CRM tab.</p>}
         </Card>
 
         <Card title="Plumber utilization (this week)" className="overflow-x-auto">
           <div className="flex flex-col gap-3 mb-3">{util.map((u) => (
             <div key={u.n}><div className="flex justify-between text-sm"><span>{u.n}</span><b>{u.pct.toFixed(0)}%{u.pct >= 95 && <span style={{ color: YELLOW }}> ⚠ At capacity</span>}</b></div><Bar pct={u.pct} color={u.pct >= 95 ? YELLOW : BLUE} /></div>))}</div>
-          <table className="w-full text-sm text-left"><thead><tr className="text-[#6B7280]"><th>Plumber</th><th>Booked Hrs</th><th>Available</th><th>Jobs</th><th>Rating</th></tr></thead>
-            <tbody>{util.map((u) => <tr key={u.n} className="border-t border-[#E5E7EB]"><td className="py-2 font-semibold">{u.n}</td><td>{u.hrs.toFixed(1)}</td><td>{WEEK_HOURS}</td><td>{u.jobs}</td><td>{u.rating ? `${u.rating.toFixed(1)}★` : '—'}</td></tr>)}</tbody></table>
-          {!util.length && <p className="text-sm text-[#6B7280]">Assign plumbers in the CRM tab.</p>}
+          <table className="w-full text-sm text-left"><thead><tr className="text-[var(--muted)]"><th>Plumber</th><th>Booked Hrs</th><th>Available</th><th>Jobs</th><th>Rating</th></tr></thead>
+            <tbody>{util.map((u) => <tr key={u.n} className="border-t border-[var(--line)]"><td className="py-2 font-semibold">{u.n}</td><td>{u.hrs.toFixed(1)}</td><td>{WEEK_HOURS}</td><td>{u.jobs}</td><td>{u.rating ? `${u.rating.toFixed(1)}★` : '—'}</td></tr>)}</tbody></table>
+          {!util.length && <p className="text-sm text-[var(--muted)]">Assign plumbers in the CRM tab.</p>}
         </Card>
       </div>
 
@@ -251,11 +251,11 @@ function Drill({ k, ls, p, filters, slices, onClose }: { k: Kpi; ls: Lead[]; p: 
   const cols = ['Name', 'Plumber', 'Job type', 'Source', 'Stage', 'Amount', 'Date'];
   const table = rows.map((l) => [l.name, plumberOf(l), typeOf(l), l.lead_source, l.stage, l.final_amount ?? l.quote_amount, new Date(l.created_at).toLocaleDateString()]);
   return (
-    <div className="fixed inset-0 z-50 bg-[#F5F5F5] overflow-auto p-4 md:p-8 noprint">
+    <div className="fixed inset-0 z-50 bg-[var(--ripple)] overflow-auto p-4 md:p-8 noprint">
       <div className="mx-auto max-w-5xl flex flex-col gap-4">
         <div className="flex items-center justify-between gap-2">
-          <div><div className="text-[#6B7280]">{k.label}</div><div className="text-4xl font-bold text-[#1F77E0]">{k.fmt(v)}</div></div>
-          <div className="flex gap-2"><button className="btn !min-h-10 bg-white border border-black/10 text-navy" onClick={() => download(`${k.id}.csv`, cols, table)}>Export CSV</button>
+          <div><div className="text-[var(--muted)]">{k.label}</div><div className="text-4xl font-bold text-[#0066cc]">{k.fmt(v)}</div></div>
+          <div className="flex gap-2"><button className="btn btn-outline !min-h-10" onClick={() => download(`${k.id}.csv`, cols, table)}>Export CSV</button>
             <button className="btn !min-h-10 btn-navy" onClick={onClose}>Close</button></div>
         </div>
         {filters}
@@ -263,8 +263,8 @@ function Drill({ k, ls, p, filters, slices, onClose }: { k: Kpi; ls: Lead[]; p: 
         <div className="grid gap-4 md:grid-cols-2">{([['By plumber', plumberOf], ['By job type', typeOf]] as const).map(([t, by]) => (
           <Card key={t} title={t}><ul className="text-sm flex flex-col gap-1">{split(by).map(([n, x]) => <li key={n} className="flex justify-between"><span>{n}</span><b>{k.fmt(x)}</b></li>)}</ul></Card>))}</div>
         <Card title={`Underlying data (${rows.length})`} className="overflow-x-auto">
-          <table className="w-full text-sm text-left"><thead><tr className="text-[#6B7280]">{cols.map((c) => <th key={c} className="pr-3">{c}</th>)}</tr></thead>
-            <tbody>{table.slice(0, 200).map((r, i) => <tr key={i} className="border-t border-[#E5E7EB]">{r.map((c, j) => <td key={j} className="py-1.5 pr-3">{j === 5 && c ? money(Number(c)) : c ?? '—'}</td>)}</tr>)}</tbody></table>
+          <table className="w-full text-sm text-left"><thead><tr className="text-[var(--muted)]">{cols.map((c) => <th key={c} className="pr-3">{c}</th>)}</tr></thead>
+            <tbody>{table.slice(0, 200).map((r, i) => <tr key={i} className="border-t border-[var(--line)]">{r.map((c, j) => <td key={j} className="py-1.5 pr-3">{j === 5 && c ? money(Number(c)) : c ?? '—'}</td>)}</tr>)}</tbody></table>
         </Card>
       </div>
     </div>

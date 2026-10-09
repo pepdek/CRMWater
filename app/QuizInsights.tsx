@@ -74,7 +74,7 @@ export default function QuizInsights({ events }: { events: QuizEvent[] }) {
         <div className="mt-3 flex flex-col gap-2">
           {STEPS.map((l, k) => (
             <div key={l}><div className="flex justify-between text-sm"><span>{k + 1}. {l}</span><b>{reached(k)} <span className="font-normal">({pct(reached(k), started)})</span></b></div>
-              <div className="h-2 bg-ice rounded"><div className="h-2 bg-aqua rounded" style={{ width: `${started ? (reached(k) / started) * 100 : 0}%` }} /></div></div>
+              <div className="h-2 bg-ice rounded"><div className="h-2 bg-navy rounded" style={{ width: `${started ? (reached(k) / started) * 100 : 0}%` }} /></div></div>
           ))}
         </div>
       </section>
@@ -88,7 +88,7 @@ export default function QuizInsights({ events }: { events: QuizEvent[] }) {
               <div className="mt-3 flex flex-col gap-2">
                 {rows.map(([label, n]) => (
                   <div key={label}><div className="flex justify-between text-sm"><span>{label}</span><b>{n} <span className="font-normal">({pct(n, base)})</span></b></div>
-                    <div className="h-2 bg-ice rounded"><div className="h-2 bg-aqua rounded" style={{ width: `${base ? (n / base) * 100 : 0}%` }} /></div></div>
+                    <div className="h-2 bg-ice rounded"><div className="h-2 bg-[var(--cyan)] border border-[var(--aqua)] rounded" style={{ width: `${base ? (n / base) * 100 : 0}%` }} /></div></div>
                 ))}
                 {!rows.length && <p className="text-sm">No answers yet.</p>}
               </div>

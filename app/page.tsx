@@ -11,7 +11,7 @@ function Cell({ value, onCommit, type = 'text', className = '', list }: { value:
   return (
     <input key={String(value)} defaultValue={value ?? ''} type={type} list={list} step={type === 'number' ? '0.01' : undefined}
       onBlur={(e) => e.target.value !== String(value ?? '') && onCommit(e.target.value)}
-      className={`bg-transparent border-b border-transparent hover:border-black/20 focus:border-aqua outline-none min-h-9 w-full ${className}`} />
+      className={`bg-transparent border-b border-transparent hover:border-black/20 focus:border-[#00a0bf] outline-none min-h-9 w-full ${className}`} />
   );
 }
 
@@ -96,12 +96,13 @@ export default function Crm() {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
-      <aside className="noprint md:w-52 shrink-0 bg-white border-b md:border-r border-[#E5E7EB] p-3 flex md:flex-col gap-1 items-center md:items-stretch overflow-x-auto">
+      <aside className="noprint md:w-52 shrink-0 gcard !rounded-none p-3 flex md:flex-col gap-1 items-center md:items-stretch overflow-x-auto">
         <div className="hidden md:block font-bold text-navy px-3 py-2">US Water Pros</div>
-        {(['dashboard', 'crm', 'quiz', 'activity'] as const).map((t) => <button key={t} onClick={() => setTab(t)} className={`text-left rounded-lg px-3 py-2 font-semibold whitespace-nowrap ${tab === t ? 'bg-[#1F77E0]/10 text-[#1F77E0]' : 'text-navy hover:bg-black/5'}`}>{t === 'crm' ? 'CRM' : t === 'quiz' ? 'Quiz' : t === 'activity' ? 'Site activity' : 'Dashboard'}</button>)}
+        {(['dashboard', 'crm', 'quiz', 'activity'] as const).map((t) => <button key={t} onClick={() => setTab(t)} className={`text-left rounded-lg px-3 py-2 font-semibold whitespace-nowrap ${tab === t ? 'bg-[#0066cc]/10 text-[#0066cc]' : 'text-navy hover:bg-black/5'}`}>{t === 'crm' ? 'CRM' : t === 'quiz' ? 'Quiz' : t === 'activity' ? 'Site activity' : 'Dashboard'}</button>)}
         <button className="md:mt-auto text-left rounded-lg px-3 py-2 text-navy hover:bg-black/5 whitespace-nowrap" onClick={() => sb.auth.signOut()}>Sign out</button>
       </aside>
-      <main className="flex-1 min-w-0 p-4 flex flex-col gap-4">
+      <main className="flex-1 min-w-0 p-4 md:p-10 flex flex-col gap-10">
+      <h1 className="!text-3xl">{{ dashboard: 'Dashboard', crm: 'CRM', quiz: 'Quiz', activity: 'Site activity' }[tab]}</h1>
       {msg && <p className="text-coral text-sm font-semibold">{msg}</p>}
       {tab === 'dashboard' && <Dashboard leads={leads} go={(p) => { setF({ q: '', stage: '', plumber: '', source: '', flag: '', ...p }); if (Object.keys(p).length) setTab('crm'); }} />}
       {tab === 'quiz' && <QuizInsights events={events} />}
@@ -110,12 +111,12 @@ export default function Crm() {
       {tab === 'crm' && (
         <>
           <div className="flex flex-wrap gap-2">
-            {(f.source || f.flag) && <button className="btn !min-h-12 bg-white border border-black/10 text-navy" onClick={() => setF({ ...f, source: '', flag: '' })}>Clear: {f.source || (f.flag === 'stuck' ? 'stuck leads' : 'unpaid')} ✕</button>}
+            {(f.source || f.flag) && <button className="btn !min-h-12 btn-outline" onClick={() => setF({ ...f, source: '', flag: '' })}>Clear: {f.source || (f.flag === 'stuck' ? 'stuck leads' : 'unpaid')} ✕</button>}
             <input className="field !w-56" placeholder="Search name, phone, email…" value={f.q} onChange={(e) => setF({ ...f, q: e.target.value })} />
             <select className="field !w-auto" value={f.stage} onChange={(e) => setF({ ...f, stage: e.target.value })}><option value="">All stages</option>{STAGES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
             <select className="field !w-auto" value={f.plumber} onChange={(e) => setF({ ...f, plumber: e.target.value })}><option value="">All plumbers</option>{plumbers.map((p) => <option key={p}>{p}</option>)}</select>
-            <button className="btn btn-aqua !min-h-12" onClick={() => setAdding(!adding)}>+ Add lead</button>
-            <button className="btn !min-h-12 bg-white border border-black/10 text-navy" onClick={exportCsv}>Export CSV</button>
+            <button className="btn btn-orange !min-h-12" onClick={() => setAdding(!adding)}>+ Add lead</button>
+            <button className="btn !min-h-12 btn-outline" onClick={exportCsv}>Export CSV</button>
           </div>
           {adding && (
             <form className="card p-4 !transform-none grid gap-2 sm:grid-cols-3 lg:grid-cols-6" onSubmit={async (e) => {
@@ -153,8 +154,8 @@ export default function Crm() {
                   <td className="p-2"><Cell type="date" value={l.job_date} onCommit={(v) => update(l.id, { job_date: v || null })} /></td>
                   <td className="p-2 w-24"><Cell type="number" value={l.quote_amount} onCommit={(v) => update(l.id, { quote_amount: num(v) })} /></td>
                   <td className="p-2 w-24"><Cell type="number" value={l.final_amount} onCommit={(v) => update(l.id, { final_amount: num(v) })} /></td>
-                  <td className="p-2"><input type="checkbox" checked={l.paid} onChange={(e) => update(l.id, { paid: e.target.checked })} className="w-5 h-5 accent-[var(--aqua)]" aria-label="Paid" /></td>
-                  <td className="p-2 whitespace-nowrap"><b>{days(l.last_contact_at ?? l.created_at)}</b> <button className="ml-1 text-xs underline" onClick={() => update(l.id, { last_contact_at: new Date().toISOString() })}>log contact</button></td>
+                  <td className="p-2"><input type="checkbox" checked={l.paid} onChange={(e) => update(l.id, { paid: e.target.checked })} className="w-5 h-5 accent-[#00a0bf]" aria-label="Paid" /></td>
+                  <td className="p-2 whitespace-nowrap"><b>{days(l.last_contact_at ?? l.created_at)}</b> <button className="ml-1 text-xs link" onClick={() => update(l.id, { last_contact_at: new Date().toISOString() })}>log contact</button></td>
                   <td className="p-2 min-w-32"><Cell value={l.lead_source} list="sources" onCommit={(v) => update(l.id, { lead_source: v || null })} /></td>
                   <td className="p-2 w-20"><Cell type="number" value={l.job_hours} onCommit={(v) => update(l.id, { job_hours: num(v) })} /></td>
                   <td className="p-2 w-24"><Cell type="number" value={l.lead_cost} onCommit={(v) => update(l.id, { lead_cost: num(v) })} /></td>

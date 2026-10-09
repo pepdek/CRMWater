@@ -25,7 +25,7 @@ export default function SiteActivity({ events }: { events: SiteEvent[] }) {
       <section className="card p-5 !transform-none">
         <h2 className="text-xl">{title}</h2>
         <div className="mt-3 flex flex-col gap-2">
-          {data.map(([k, n]) => (<div key={k}><div className="flex justify-between text-sm"><span>{k}</span><b>{n}</b></div><div className="h-2 bg-ice rounded"><div className="h-2 bg-aqua rounded" style={{ width: `${(n / max) * 100}%` }} /></div></div>))}
+          {data.map(([k, n]) => (<div key={k}><div className="flex justify-between text-sm"><span>{k}</span><b>{n}</b></div><div className="h-2 bg-ice rounded"><div className="h-2 bg-navy rounded" style={{ width: `${(n / max) * 100}%` }} /></div></div>))}
           {!data.length && <p className="text-sm">No data yet.</p>}
         </div>
       </section>
@@ -49,7 +49,7 @@ export default function SiteActivity({ events }: { events: SiteEvent[] }) {
       <section className="card p-5 !transform-none">
         <h2 className="text-xl">Calls, texts and consultation clicks, last 14 days</h2>
         <div className="mt-4 flex items-end gap-1 h-32">
-          {perDay.map((n, i) => (<div key={days[i]} className="flex-1 flex flex-col items-center justify-end h-full" title={`${days[i]}: ${n}`}><div className="w-full bg-aqua rounded-t" style={{ height: `${(n / maxDay) * 100}%`, minHeight: n ? 4 : 0 }} /><span className="text-[10px] mt-1">{days[i].slice(8)}</span></div>))}
+          {perDay.map((n, i) => (<div key={days[i]} className="flex-1 flex flex-col items-center justify-end h-full" title={`${days[i]}: ${n}`}><div className="w-full bg-[var(--cyan)] border border-[var(--aqua)] rounded-t" style={{ height: `${(n / maxDay) * 100}%`, minHeight: n ? 4 : 0 }} /><span className="text-[10px] mt-1">{days[i].slice(8)}</span></div>))}
         </div>
       </section>
       <div className="grid gap-5 lg:grid-cols-2">
