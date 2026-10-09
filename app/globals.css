@@ -4,11 +4,11 @@
   --blue:#0066cc; --orange:#ff6b35; --teal:#1b4965; --aqua:#00a0bf; --cyan:#a8e9ef; --mist:#effef8; --coral:#FF6F61;
   --navy:#1b4965; --ripple:#effef8; --ice:rgba(27,73,101,.10);
   --ink:#1a1a1a; --muted:#4b5563; --head:#0066cc;
-  --page:linear-gradient(160deg,#effef8,#cdeff3); --card:rgba(239,254,248,.72); --line:rgba(0,160,191,.35); --track:rgba(27,73,101,.10);
+  --page:#F8F9FA; --card:rgba(255,255,255,.85); --side:#e3f6f8; --line:rgba(0,160,191,.35); --track:rgba(27,73,101,.10);
 }
 @media (prefers-color-scheme: dark) { :root {
   --navy:#a8e9ef; --ripple:#0d2433; --ice:rgba(168,233,239,.15); --ink:#fff; --muted:#b6c8d2; --head:#a8e9ef;
-  --page:linear-gradient(160deg,#0d2433,#12384d); --card:rgba(27,73,101,.45); --line:rgba(0,160,191,.5); --track:rgba(168,233,239,.15);
+  --page:linear-gradient(160deg,#0d2433,#12384d); --card:rgba(27,73,101,.45); --side:rgba(27,73,101,.6); --line:rgba(0,160,191,.5); --track:rgba(168,233,239,.15);
 } }
 body { background: var(--page) fixed; color: var(--ink); font-size: 14px; line-height: 24px; }
 @media (min-width: 768px) { body { font-size: 16px; } }

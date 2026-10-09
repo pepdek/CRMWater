@@ -96,7 +96,7 @@ export default function Crm() {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
-      <aside className="noprint md:w-52 shrink-0 gcard !rounded-none p-3 flex md:flex-col gap-1 items-center md:items-stretch overflow-x-auto">
+      <aside className="noprint md:w-52 shrink-0 gcard !rounded-none !bg-[var(--side)] p-3 flex md:flex-col gap-1 items-center md:items-stretch overflow-x-auto">
         <div className="hidden md:block font-bold text-navy px-3 py-2">US Water Pros</div>
         {(['dashboard', 'crm', 'quiz', 'activity'] as const).map((t) => <button key={t} onClick={() => setTab(t)} className={`text-left rounded-lg px-3 py-2 font-semibold whitespace-nowrap ${tab === t ? 'bg-[#0066cc]/10 text-[#0066cc]' : 'text-navy hover:bg-black/5'}`}>{t === 'crm' ? 'CRM' : t === 'quiz' ? 'Quiz' : t === 'activity' ? 'Site activity' : 'Dashboard'}</button>)}
         <button className="md:mt-auto text-left rounded-lg px-3 py-2 text-navy hover:bg-black/5 whitespace-nowrap" onClick={() => sb.auth.signOut()}>Sign out</button>
