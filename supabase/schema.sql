@@ -47,3 +47,19 @@ grant execute on function public.is_admin() to authenticated;
 
 -- Quiz answers from the public /quiz page (full response object).
 alter table leads add column quiz jsonb;
+
+-- Step-by-step quiz answers from /quiz (anonymous, no contact details). The CRM Quiz tab groups these by session_id.
+create table quiz_events (
+  id bigint generated always as identity primary key,
+  session_id uuid not null,
+  created_at timestamptz not null default now(),
+  screen varchar(20) not null,
+  answers jsonb not null default '{}',
+  recommendation jsonb
+);
+create index idx_quiz_events_session on quiz_events(session_id);
+create index idx_quiz_events_created on quiz_events(created_at);
+alter table quiz_events enable row level security;
+create policy "site insert" on quiz_events for insert to anon
+  with check (char_length(screen) <= 20 and pg_column_size(answers) < 4000 and (recommendation is null or pg_column_size(recommendation) < 2000));
+create policy "admin all" on quiz_events for all to authenticated using (is_admin()) with check (is_admin());

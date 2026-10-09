@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { SERVICES } from '@/lib/services';
+import QuizInsights, { type QuizEvent } from './QuizInsights';
 
 type Lead = {
   id: string; created_at: string; name: string; email: string | null; phone: string | null; address: string | null;
@@ -35,7 +36,8 @@ export default function Crm() {
   const sb = useMemo(() => supabase(), []);
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [tab, setTab] = useState<'dashboard' | 'crm'>('dashboard');
+  const [tab, setTab] = useState<'dashboard' | 'crm' | 'quiz'>('dashboard');
+  const [events, setEvents] = useState<QuizEvent[]>([]);
   const [f, setF] = useState({ q: '', stage: '', plumber: '' });
   const [login, setLogin] = useState({ email: '', password: '', err: '' });
   const [adding, setAdding] = useState(false);
@@ -44,6 +46,8 @@ export default function Crm() {
   const load = useCallback(async () => {
     const { data, error } = await sb.from('leads').select('*').order('created_at', { ascending: false }).limit(2000);
     if (error) setMsg(error.message); else setLeads((data as Lead[]) ?? []);
+    const ev = await sb.from('quiz_events').select('session_id,created_at,screen,answers,recommendation').order('created_at', { ascending: false }).limit(10000);
+    if (!ev.error) setEvents((ev.data as QuizEvent[]) ?? []);
   }, [sb]);
 
   useEffect(() => {
@@ -125,7 +129,7 @@ export default function Crm() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="!text-3xl">CRM</h1>
         <div className="flex gap-2">
-          {(['dashboard', 'crm'] as const).map((t) => <button key={t} onClick={() => setTab(t)} className={`btn !min-h-10 capitalize ${tab === t ? 'btn-navy' : 'bg-white border border-black/10 text-navy'}`}>{t === 'crm' ? 'CRM' : 'Dashboard'}</button>)}
+          {(['dashboard', 'crm', 'quiz'] as const).map((t) => <button key={t} onClick={() => setTab(t)} className={`btn !min-h-10 ${tab === t ? 'btn-navy' : 'bg-white border border-black/10 text-navy'}`}>{t === 'crm' ? 'CRM' : t === 'quiz' ? 'Quiz' : 'Dashboard'}</button>)}
           <button className="btn !min-h-10 bg-white border border-black/10 text-navy" onClick={() => sb.auth.signOut()}>Sign out</button>
         </div>
       </div>
@@ -168,6 +172,8 @@ export default function Crm() {
           </div>
         </>
       )}
+
+      {tab === 'quiz' && <QuizInsights events={events} />}
 
       {tab === 'crm' && (
         <>
