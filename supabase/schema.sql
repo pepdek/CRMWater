@@ -70,3 +70,27 @@ alter table leads
   add column review_rating smallint check (review_rating between 1 and 5),
   add column job_hours numeric(4,1),           -- hours booked for the job (utilization); blank = assume 3
   add column lead_cost numeric(10,2);          -- what this lead cost to acquire (CPL / ROI)
+
+-- Lead source and site activity (added with the GA4/GTM tracking work).
+-- leads.lead_source already existed as a free-text column; the public site now fills it automatically ("google / cpc / campaign").
+alter table leads add column if not exists attribution jsonb;
+alter table quiz_events add column if not exists attribution jsonb;
+create table if not exists site_events (
+  id bigint generated always as identity primary key,
+  created_at timestamptz not null default now(),
+  event varchar(40) not null,
+  page varchar(200),
+  source varchar(60),
+  device_type varchar(10),
+  traffic_source varchar(20),
+  lead_source varchar(120),
+  city varchar(30),
+  session_id uuid,
+  params jsonb
+);
+create index if not exists idx_site_events_created on site_events(created_at);
+create index if not exists idx_site_events_event on site_events(event);
+alter table site_events enable row level security;
+create policy "site insert" on site_events for insert to anon
+  with check (char_length(event) <= 40 and (params is null or pg_column_size(params) < 2000));
+create policy "admin all" on site_events for all to authenticated using (is_admin()) with check (is_admin());

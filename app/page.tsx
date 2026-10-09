@@ -5,6 +5,7 @@ import { SERVICES } from '@/lib/services';
 import { type Lead, STAGES, SOURCES, days, money, stale, overdue } from '@/lib/crm';
 import Dashboard from './Dashboard';
 import QuizInsights, { type QuizEvent } from './QuizInsights';
+import SiteActivity, { type SiteEvent } from './SiteActivity';
 
 function Cell({ value, onCommit, type = 'text', className = '', list }: { value: string | number | null; onCommit: (v: string) => void; type?: string; className?: string; list?: string }) {
   return (
@@ -18,7 +19,8 @@ export default function Crm() {
   const sb = useMemo(() => supabase(), []);
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [tab, setTab] = useState<'dashboard' | 'crm' | 'quiz'>('dashboard');
+  const [tab, setTab] = useState<'dashboard' | 'crm' | 'quiz' | 'activity'>('dashboard');
+  const [siteEvents, setSiteEvents] = useState<SiteEvent[]>([]);
   const [events, setEvents] = useState<QuizEvent[]>([]);
   const [f, setF] = useState<{ q: string; stage: string; plumber: string; source: string; flag: '' | 'stuck' | 'unpaid' }>({ q: '', stage: '', plumber: '', source: '', flag: '' });
   const [login, setLogin] = useState({ email: '', password: '', err: '' });
@@ -28,8 +30,10 @@ export default function Crm() {
   const load = useCallback(async () => {
     const { data, error } = await sb.from('leads').select('*').order('created_at', { ascending: false }).limit(2000);
     if (error) setMsg(error.message); else setLeads((data as Lead[]) ?? []);
-    const ev = await sb.from('quiz_events').select('session_id,created_at,screen,answers,recommendation').order('created_at', { ascending: false }).limit(10000);
+    const ev = await sb.from('quiz_events').select('session_id,created_at,screen,answers,recommendation,attribution').order('created_at', { ascending: false }).limit(10000);
     if (!ev.error) setEvents((ev.data as QuizEvent[]) ?? []);
+    const se = await sb.from('site_events').select('created_at,event,page,source,device_type,traffic_source,lead_source,city').order('created_at', { ascending: false }).limit(10000);
+    if (!se.error) setSiteEvents((se.data as SiteEvent[]) ?? []);
   }, [sb]);
 
   useEffect(() => {
@@ -94,13 +98,14 @@ export default function Crm() {
     <div className="min-h-screen flex flex-col md:flex-row">
       <aside className="noprint md:w-52 shrink-0 bg-white border-b md:border-r border-[#E5E7EB] p-3 flex md:flex-col gap-1 items-center md:items-stretch overflow-x-auto">
         <div className="hidden md:block font-bold text-navy px-3 py-2">US Water Pros</div>
-        {(['dashboard', 'crm', 'quiz'] as const).map((t) => <button key={t} onClick={() => setTab(t)} className={`text-left rounded-lg px-3 py-2 font-semibold whitespace-nowrap ${tab === t ? 'bg-[#1F77E0]/10 text-[#1F77E0]' : 'text-navy hover:bg-black/5'}`}>{t === 'crm' ? 'CRM' : t === 'quiz' ? 'Quiz' : 'Dashboard'}</button>)}
+        {(['dashboard', 'crm', 'quiz', 'activity'] as const).map((t) => <button key={t} onClick={() => setTab(t)} className={`text-left rounded-lg px-3 py-2 font-semibold whitespace-nowrap ${tab === t ? 'bg-[#1F77E0]/10 text-[#1F77E0]' : 'text-navy hover:bg-black/5'}`}>{t === 'crm' ? 'CRM' : t === 'quiz' ? 'Quiz' : t === 'activity' ? 'Site activity' : 'Dashboard'}</button>)}
         <button className="md:mt-auto text-left rounded-lg px-3 py-2 text-navy hover:bg-black/5 whitespace-nowrap" onClick={() => sb.auth.signOut()}>Sign out</button>
       </aside>
       <main className="flex-1 min-w-0 p-4 flex flex-col gap-4">
       {msg && <p className="text-coral text-sm font-semibold">{msg}</p>}
       {tab === 'dashboard' && <Dashboard leads={leads} go={(p) => { setF({ q: '', stage: '', plumber: '', source: '', flag: '', ...p }); if (Object.keys(p).length) setTab('crm'); }} />}
       {tab === 'quiz' && <QuizInsights events={events} />}
+      {tab === 'activity' && <SiteActivity events={siteEvents} />}
 
       {tab === 'crm' && (
         <>

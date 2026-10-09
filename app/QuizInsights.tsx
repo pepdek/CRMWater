@@ -5,6 +5,7 @@ export type QuizEvent = {
   session_id: string; created_at: string; screen: string;
   answers: { location?: string; currentSituation?: string; waterConcerns?: string[]; waterSourceType?: string; servicePathA?: string; householdSize?: string; budgetComfort?: string; timeline?: string; communicationPreference?: string };
   recommendation: { path?: string; label?: string } | null;
+  attribution?: { source?: string; medium?: string; campaign?: string; traffic_source?: string } | null;
 };
 
 // Furthest-step index per screen. Interstitials share the step of the question before them; qwell and q4a share a step.
@@ -12,7 +13,7 @@ const STEP: Record<string, number> = { q1: 0, q2: 1, i1: 1, q3: 2, i2: 2, qwell:
 const STEPS = ['Location', 'Situation', 'Concerns', 'Path / well question', 'Household', 'Budget style', 'Timeline', 'Contact preference', 'Saw result', 'Submitted contact info'];
 const DAY = 86400000;
 
-type Session = { id: string; start: string; furthest: number; answers: QuizEvent['answers']; rec: QuizEvent['recommendation'] };
+type Session = { id: string; start: string; furthest: number; answers: QuizEvent['answers']; rec: QuizEvent['recommendation']; at: QuizEvent['attribution'] };
 
 export default function QuizInsights({ events }: { events: QuizEvent[] }) {
   const [range, setRange] = useState<'7' | '30' | 'all'>('30');
@@ -21,9 +22,9 @@ export default function QuizInsights({ events }: { events: QuizEvent[] }) {
   const sessions = useMemo(() => {
     const m = new Map<string, Session>();
     for (const e of [...events].sort((a, b) => a.created_at.localeCompare(b.created_at))) {
-      const s = m.get(e.session_id) ?? { id: e.session_id, start: e.created_at, furthest: -1, answers: {}, rec: null };
+      const s = m.get(e.session_id) ?? { id: e.session_id, start: e.created_at, furthest: -1, answers: {}, rec: null, at: null };
       s.furthest = Math.max(s.furthest, STEP[e.screen] ?? -1);
-      s.answers = e.answers; if (e.recommendation) s.rec = e.recommendation;
+      s.answers = e.answers; if (e.recommendation) s.rec = e.recommendation; if (e.attribution) s.at = e.attribution;
       m.set(e.session_id, s);
     }
     return [...m.values()];
@@ -44,6 +45,7 @@ export default function QuizInsights({ events }: { events: QuizEvent[] }) {
     ['What matters most (softness / purity)', (s) => [s.answers.servicePathA]], ['Household size', (s) => [s.answers.householdSize]],
     ['How they decide on purchases', (s) => [s.answers.budgetComfort]], ['Install timeline', (s) => [s.answers.timeline]],
     ['Contact preference', (s) => [s.answers.communicationPreference]], ['Recommended path', (s) => [s.rec?.label]],
+    ['Traffic source', (s) => [s.at?.traffic_source]], ['Source / medium / campaign', (s) => [s.at ? [s.at.source, s.at.medium, s.at.campaign].filter((x) => x && x !== 'none').join(' / ') || 'direct' : undefined]],
   ];
   const top = (pick: (s: Session) => (string | undefined)[]) => tally(pick).rows[0]?.[0];
   const persona = shown.length
