@@ -132,17 +132,19 @@ export default function Crm() {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
-      <aside className="noprint md:w-52 shrink-0 gcard !rounded-none !bg-[var(--side)] p-3 flex md:flex-col gap-1 items-center md:items-stretch overflow-x-auto">
+      <aside className="noprint md:w-52 shrink-0 md:sticky md:top-0 md:h-screen gcard !rounded-none !bg-[var(--side)] p-3 flex md:flex-col gap-1 items-center md:items-stretch overflow-x-auto">
         <div className="hidden md:block font-bold text-navy px-3 py-2">US Water Pros</div>
         {(['dashboard', 'crm', 'quiz', 'activity'] as const).map((t) => <button key={t} onClick={() => { setTab(t); setLeadId(null); }} className={`text-left rounded-lg px-3 py-2 font-semibold whitespace-nowrap ${tab === t ? 'bg-[#0066cc]/10 text-[#0066cc]' : 'text-navy hover:bg-black/5'}`}>{t === 'crm' ? 'CRM' : t === 'quiz' ? 'Quiz' : t === 'activity' ? 'Site activity' : 'Dashboard'}</button>)}
-        <button type="button" role="switch" aria-checked={showDemo} onClick={toggleDemo} className="md:mt-auto text-left rounded-lg px-3 py-2 text-navy hover:bg-black/5 whitespace-nowrap flex items-center gap-2">
-          <span aria-hidden className={`inline-block w-9 h-5 rounded-full relative ${showDemo ? 'bg-[#00a0bf]' : 'bg-black/25'}`}><span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${showDemo ? 'left-[1.15rem]' : 'left-0.5'}`} /></span>
-          Demo data{demoCount ? ` (${demoCount})` : ''}
-        </button>
-        <button className="text-left rounded-lg px-3 py-2 text-navy hover:bg-black/5 whitespace-nowrap" onClick={() => sb.auth.signOut()}>Sign out</button>
+        <button className="md:mt-auto text-left rounded-lg px-3 py-2 text-navy hover:bg-black/5 whitespace-nowrap" onClick={() => sb.auth.signOut()}>Sign out</button>
       </aside>
       <main className="flex-1 min-w-0 p-4 md:p-10 flex flex-col gap-10">
-      <h1 className="!text-3xl">{{ dashboard: 'Dashboard', crm: 'CRM', quiz: 'Quiz', activity: 'Site activity' }[tab]}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="!text-3xl">{{ dashboard: 'Dashboard', crm: 'CRM', quiz: 'Quiz', activity: 'Site activity' }[tab]}</h1>
+        <button type="button" role="switch" aria-checked={showDemo} onClick={toggleDemo} className="rounded-full border border-black/15 bg-white px-4 min-h-11 flex items-center gap-3 font-semibold text-navy">
+          <span aria-hidden className={`inline-block w-10 h-6 rounded-full relative shrink-0 ${showDemo ? 'bg-[#00a0bf]' : 'bg-black/25'}`}><span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${showDemo ? 'left-5' : 'left-1'}`} /></span>
+          Demo data{demoCount ? ` (${demoCount})` : ''}: {showDemo ? 'on' : 'off'}
+        </button>
+      </div>
       {msg && <p className="text-coral text-sm font-semibold">{msg}</p>}
       {tab === 'dashboard' && <Dashboard leads={vLeads} go={(p) => { setF({ ...EMPTY_F, ...p }); setLeadId(null); if (Object.keys(p).length) setTab('crm'); }} />}
       {tab === 'quiz' && <QuizInsights events={vEvents} />}
