@@ -76,6 +76,13 @@ export default function Crm() {
     history[nav ? 'pushState' : 'replaceState'](null, '', url);
   }, [ready, tab, f, leadId]);
 
+  // Hooks above must stay above the early returns below (hook order has to be identical on every render).
+  const isDemoLead = (l: Lead) => !!l.email?.startsWith('qa-demo+');
+  const vLeads = useMemo(() => (showDemo ? leads : leads.filter((l) => !isDemoLead(l))), [leads, showDemo]);
+  const vEvents = useMemo(() => (showDemo ? events : events.filter((e) => !e.session_id.startsWith('dddddddd-'))), [events, showDemo]);
+  const vSite = useMemo(() => (showDemo ? siteEvents : siteEvents.filter((e) => !e.params?.demo)), [siteEvents, showDemo]);
+  const demoCount = leads.filter(isDemoLead).length;
+
   if (authed === null) return null;
   if (!authed) {
     return (
@@ -106,11 +113,6 @@ export default function Crm() {
   };
   const num = (v: string) => (v === '' ? null : Number(v));
 
-  const isDemoLead = (l: Lead) => !!l.email?.startsWith('qa-demo+');
-  const vLeads = useMemo(() => (showDemo ? leads : leads.filter((l) => !isDemoLead(l))), [leads, showDemo]);
-  const vEvents = useMemo(() => (showDemo ? events : events.filter((e) => !e.session_id.startsWith('dddddddd-'))), [events, showDemo]);
-  const vSite = useMemo(() => (showDemo ? siteEvents : siteEvents.filter((e) => !e.params?.demo)), [siteEvents, showDemo]);
-  const demoCount = leads.filter(isDemoLead).length;
 
   const plumbers = [...new Set(vLeads.map((l) => l.plumber_assigned).filter(Boolean))] as string[];
   const rows = vLeads.filter((l) =>
