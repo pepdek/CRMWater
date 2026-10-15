@@ -26,13 +26,17 @@ export default function Crm() {
   const [login, setLogin] = useState({ email: '', password: '', err: '' });
   const [adding, setAdding] = useState(false);
   const [msg, setMsg] = useState('');
+  // Demo/QA rows are marked (qa-demo emails, dddddddd- quiz sessions, params.demo events) and hidden unless this is on.
+  const [showDemo, setShowDemo] = useState(false);
+  useEffect(() => { try { setShowDemo(localStorage.getItem('crm_show_demo') === '1'); } catch { /* storage blocked */ } }, []);
+  const toggleDemo = () => setShowDemo((v) => { try { localStorage.setItem('crm_show_demo', v ? '0' : '1'); } catch { /* storage blocked */ } return !v; });
 
   const load = useCallback(async () => {
     const { data, error } = await sb.from('leads').select('*').order('created_at', { ascending: false }).limit(2000);
     if (error) setMsg(error.message); else setLeads((data as Lead[]) ?? []);
     const ev = await sb.from('quiz_events').select('session_id,created_at,screen,answers,recommendation,attribution').order('created_at', { ascending: false }).limit(10000);
     if (!ev.error) setEvents((ev.data as QuizEvent[]) ?? []);
-    const se = await sb.from('site_events').select('created_at,event,page,source,device_type,traffic_source,lead_source,city').order('created_at', { ascending: false }).limit(10000);
+    const se = await sb.from('site_events').select('created_at,event,page,source,device_type,traffic_source,lead_source,city,params').order('created_at', { ascending: false }).limit(10000);
     if (!se.error) setSiteEvents((se.data as SiteEvent[]) ?? []);
   }, [sb]);
 
@@ -102,8 +106,14 @@ export default function Crm() {
   };
   const num = (v: string) => (v === '' ? null : Number(v));
 
-  const plumbers = [...new Set(leads.map((l) => l.plumber_assigned).filter(Boolean))] as string[];
-  const rows = leads.filter((l) =>
+  const isDemoLead = (l: Lead) => !!l.email?.startsWith('qa-demo+');
+  const vLeads = useMemo(() => (showDemo ? leads : leads.filter((l) => !isDemoLead(l))), [leads, showDemo]);
+  const vEvents = useMemo(() => (showDemo ? events : events.filter((e) => !e.session_id.startsWith('dddddddd-'))), [events, showDemo]);
+  const vSite = useMemo(() => (showDemo ? siteEvents : siteEvents.filter((e) => !e.params?.demo)), [siteEvents, showDemo]);
+  const demoCount = leads.filter(isDemoLead).length;
+
+  const plumbers = [...new Set(vLeads.map((l) => l.plumber_assigned).filter(Boolean))] as string[];
+  const rows = vLeads.filter((l) =>
     (!f.stage || l.stage === f.stage) && (!f.plumber || l.plumber_assigned === f.plumber) && (!f.source || (l.lead_source ?? 'Unknown') === f.source) &&
     (!f.flag || (f.flag === 'stuck' ? stale(l) : overdue(l))) &&
     (!f.q || [l.name, l.email, l.phone, l.address, l.notes].some((v) => v?.toLowerCase().includes(f.q.toLowerCase()))));
@@ -116,7 +126,7 @@ export default function Crm() {
     a.download = 'leads.csv'; a.click();
   };
 
-  const lead = leadId ? leads.find((l) => l.id === leadId) : undefined;
+  const lead = leadId ? vLeads.find((l) => l.id === leadId) : undefined;
   // Table shows the daily-driver columns only; everything else is in the side panel.
   const TH: [string, string][] = [['Name', ''], ['Phone', 'hidden md:table-cell'], ['Stage', ''], ['Plumber', 'hidden md:table-cell'], ['Quote $', 'hidden lg:table-cell'], ['Final $', ''], ['Paid?', ''], ['Days Since Contact', '']];
 
@@ -125,14 +135,18 @@ export default function Crm() {
       <aside className="noprint md:w-52 shrink-0 gcard !rounded-none !bg-[var(--side)] p-3 flex md:flex-col gap-1 items-center md:items-stretch overflow-x-auto">
         <div className="hidden md:block font-bold text-navy px-3 py-2">US Water Pros</div>
         {(['dashboard', 'crm', 'quiz', 'activity'] as const).map((t) => <button key={t} onClick={() => { setTab(t); setLeadId(null); }} className={`text-left rounded-lg px-3 py-2 font-semibold whitespace-nowrap ${tab === t ? 'bg-[#0066cc]/10 text-[#0066cc]' : 'text-navy hover:bg-black/5'}`}>{t === 'crm' ? 'CRM' : t === 'quiz' ? 'Quiz' : t === 'activity' ? 'Site activity' : 'Dashboard'}</button>)}
-        <button className="md:mt-auto text-left rounded-lg px-3 py-2 text-navy hover:bg-black/5 whitespace-nowrap" onClick={() => sb.auth.signOut()}>Sign out</button>
+        <button type="button" role="switch" aria-checked={showDemo} onClick={toggleDemo} className="md:mt-auto text-left rounded-lg px-3 py-2 text-navy hover:bg-black/5 whitespace-nowrap flex items-center gap-2">
+          <span aria-hidden className={`inline-block w-9 h-5 rounded-full relative ${showDemo ? 'bg-[#00a0bf]' : 'bg-black/25'}`}><span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${showDemo ? 'left-[1.15rem]' : 'left-0.5'}`} /></span>
+          Demo data{demoCount ? ` (${demoCount})` : ''}
+        </button>
+        <button className="text-left rounded-lg px-3 py-2 text-navy hover:bg-black/5 whitespace-nowrap" onClick={() => sb.auth.signOut()}>Sign out</button>
       </aside>
       <main className="flex-1 min-w-0 p-4 md:p-10 flex flex-col gap-10">
       <h1 className="!text-3xl">{{ dashboard: 'Dashboard', crm: 'CRM', quiz: 'Quiz', activity: 'Site activity' }[tab]}</h1>
       {msg && <p className="text-coral text-sm font-semibold">{msg}</p>}
-      {tab === 'dashboard' && <Dashboard leads={leads} go={(p) => { setF({ ...EMPTY_F, ...p }); setLeadId(null); if (Object.keys(p).length) setTab('crm'); }} />}
-      {tab === 'quiz' && <QuizInsights events={events} />}
-      {tab === 'activity' && <SiteActivity events={siteEvents} />}
+      {tab === 'dashboard' && <Dashboard leads={vLeads} go={(p) => { setF({ ...EMPTY_F, ...p }); setLeadId(null); if (Object.keys(p).length) setTab('crm'); }} />}
+      {tab === 'quiz' && <QuizInsights events={vEvents} />}
+      {tab === 'activity' && <SiteActivity events={vSite} />}
 
       {tab === 'crm' && (
         <>
@@ -169,7 +183,7 @@ export default function Crm() {
               <thead><tr className="text-navy">{TH.map(([h, c]) => <th key={h} className={`p-2 whitespace-nowrap ${c}`}>{h}</th>)}</tr></thead>
               <tbody>{rows.map((l) => (
                 <tr key={l.id} className={`border-t border-black/10 ${stale(l) ? 'bg-red-100' : overdue(l) ? 'bg-amber-100' : ''}`}>
-                  <td className="p-2 min-w-36"><button className="font-semibold text-left link" onClick={() => setLeadId(l.id)}>{l.name}</button></td>
+                  <td className="p-2 min-w-36"><button className="font-semibold text-left link" onClick={() => setLeadId(l.id)}>{l.name}</button>{isDemoLead(l) && <span className="ml-2 text-xs rounded-full bg-amber-100 px-2 py-0.5 font-semibold">DEMO</span>}</td>
                   <td className="p-2 whitespace-nowrap hidden md:table-cell">{l.phone ? <a href={`tel:${l.phone}`}>{l.phone}</a> : '—'}</td>
                   <td className="p-2"><select className="field !min-h-9 !w-44" value={l.stage} onChange={(e) => setStage(l, e.target.value)}>{STAGES.map(([k, lb]) => <option key={k} value={k}>{lb}</option>)}</select></td>
                   <td className="p-2 min-w-28 hidden md:table-cell"><Cell value={l.plumber_assigned} list="plumbers" onCommit={(v) => update(l.id, { plumber_assigned: v || null })} /></td>

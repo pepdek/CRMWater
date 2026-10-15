@@ -1,7 +1,7 @@
 'use client';
 import { useMemo, useState } from 'react';
 
-export type SiteEvent = { created_at: string; event: string; page: string | null; source: string | null; device_type: string | null; traffic_source: string | null; lead_source: string | null; city: string | null };
+export type SiteEvent = { created_at: string; event: string; page: string | null; source: string | null; device_type: string | null; traffic_source: string | null; lead_source: string | null; city: string | null; params?: Record<string, unknown> | null };
 
 const DAY = 86400000;
 const CARDS: [string, string][] = [
