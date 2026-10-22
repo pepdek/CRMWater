@@ -94,3 +94,7 @@ alter table site_events enable row level security;
 create policy "site insert" on site_events for insert to anon
   with check (char_length(event) <= 40 and (params is null or pg_column_size(params) < 2000));
 create policy "admin all" on site_events for all to authenticated using (is_admin()) with check (is_admin());
+
+-- Online orders (public site store). Applied to the live project as migration leads_order_details.
+alter table public.leads add column if not exists order_details jsonb;      -- tier, install date/window, status, confirm_by, confirmed_at, alert timestamps
+alter table public.leads add column if not exists stripe_session_id text;

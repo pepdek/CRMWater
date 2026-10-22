@@ -1,6 +1,6 @@
 'use client';
 import { useEffect } from 'react';
-import { type Lead, STAGES, days } from '@/lib/crm';
+import { type Lead, STAGES, days, needsConfirm } from '@/lib/crm';
 import Cell from './Cell';
 
 const Field = ({ label, children }: { label: string; children: React.ReactNode }) => <label className="block"><span className="text-xs text-[var(--muted)]">{label}</span>{children}</label>;
@@ -23,6 +23,18 @@ export default function LeadPanel({ lead: l, update, setStage, onClose }: { lead
           <button className="btn btn-outline !min-h-10" onClick={onClose} aria-label="Close">✕</button>
         </div>
         <button className="btn btn-navy !min-h-10" onClick={() => update(l.id, { last_contact_at: new Date().toISOString() })}>Log contact today</button>
+        {l.order_details && (
+          <Section title="Online order">
+            <div className="text-sm">
+              <div><b>{String(l.order_details.tier ?? '')}</b> · install {String(l.order_details.date ?? '?')} · {String(l.order_details.window ?? '')}</div>
+              <div className="text-xs text-[var(--muted)]">Status: {String(l.order_details.status ?? '')}{l.order_details.confirm_by ? ` · confirm by ${new Date(String(l.order_details.confirm_by)).toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })} Pacific` : ''}</div>
+            </div>
+            {l.order_details.confirmed_at
+              ? <div className="text-sm font-semibold">Confirmed {new Date(String(l.order_details.confirmed_at)).toLocaleString()}</div>
+              : l.paid && <button className="btn btn-orange !min-h-10" onClick={() => { const now = new Date().toISOString(); update(l.id, { order_details: { ...l.order_details, confirmed_at: now }, last_contact_at: now }); }}>Mark confirmed (texted the customer)</button>}
+            {needsConfirm(l) && <div className="text-xs font-semibold text-red-700">Paid order not yet confirmed.</div>}
+          </Section>
+        )}
         <Section title="Contact">
           <Field label="Name"><Cell value={l.name} onCommit={(v) => update(l.id, { name: v })} /></Field>
           <Field label="Phone"><Cell value={l.phone} onCommit={u('phone')} />{l.phone && <a className="text-xs" href={`tel:${l.phone}`}>Call {l.phone}</a>}</Field>

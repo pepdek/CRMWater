@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { SERVICES } from '@/lib/services';
-import { type Lead, STAGES, SOURCES, days, money, stale, overdue } from '@/lib/crm';
+import { type Lead, STAGES, SOURCES, days, money, stale, overdue, needsConfirm } from '@/lib/crm';
 import Cell from './Cell';
 import LeadPanel from './LeadPanel';
 import Dashboard from './Dashboard';
@@ -187,7 +187,7 @@ export default function Crm() {
               <thead><tr className="text-navy">{TH.map(([h, c]) => <th key={h} className={`p-2 whitespace-nowrap ${c}`}>{h}</th>)}</tr></thead>
               <tbody>{rows.map((l) => (
                 <tr key={l.id} className={`border-t border-black/10 ${stale(l) ? 'bg-red-100' : overdue(l) ? 'bg-amber-100' : ''}`}>
-                  <td className="p-2 min-w-36"><button className="font-semibold text-left link" onClick={() => setLeadId(l.id)}>{l.name}</button>{isDemoLead(l) && <span className="ml-2 text-xs rounded-full bg-amber-100 px-2 py-0.5 font-semibold">DEMO</span>}</td>
+                  <td className="p-2 min-w-36"><button className="font-semibold text-left link" onClick={() => setLeadId(l.id)}>{l.name}</button>{isDemoLead(l) && <span className="ml-2 text-xs rounded-full bg-amber-100 px-2 py-0.5 font-semibold">DEMO</span>}{needsConfirm(l) && <span className="ml-2 text-xs rounded-full bg-red-100 text-red-800 px-2 py-0.5 font-semibold">CONFIRM</span>}</td>
                   <td className="p-2 whitespace-nowrap hidden md:table-cell">{l.phone ? <a href={`tel:${l.phone}`}>{l.phone}</a> : '—'}</td>
                   <td className="p-2"><select className="field !min-h-9 !w-44" value={l.stage} onChange={(e) => setStage(l, e.target.value)}>{STAGES.map(([k, lb]) => <option key={k} value={k}>{lb}</option>)}</select></td>
                   <td className="p-2 min-w-28 hidden md:table-cell"><Cell value={l.plumber_assigned} list="plumbers" onCommit={(v) => update(l.id, { plumber_assigned: v || null })} /></td>

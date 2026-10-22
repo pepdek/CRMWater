@@ -4,7 +4,11 @@ export type Lead = {
   plumber_assigned: string | null; job_date: string | null; quote_amount: number | null; final_amount: number | null;
   paid: boolean; completed_at: string | null;
   lead_source: string | null; review_rating: number | null; job_hours: number | null; lead_cost: number | null;
+  order_details?: Record<string, unknown> | null; stripe_session_id?: string | null;
 };
+
+// Paid online orders promise a confirmation text by the end of the next business day. True until someone marks it confirmed.
+export const needsConfirm = (l: Lead) => l.paid && !!l.order_details && !l.order_details.confirmed_at;
 
 export const STAGES: [string, string][] = [
   ['new', 'New Lead Captured'], ['contacted', 'Contacted / Qualifying'], ['consult_booked', 'Water Test / Consultation Booked'],
